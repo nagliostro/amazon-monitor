@@ -388,9 +388,9 @@
   const disparar = (inputs) => api(`/actions/workflows/${WORKFLOW}/dispatches`, {
     method: "POST", body: JSON.stringify({ ref: "main", inputs }),
   });
-  function erroGitHub(e, acao) {
+  function erroGitHub(e, acao, permissao = "Actions") {
     if (e.status === 403 || e.status === 404)
-      return `Não consegui ${acao}: o token precisa de Actions → Read and write. Crie outro e conecte de novo.`;
+      return `Não consegui ${acao}: o token precisa de ${permissao} → Read and write. Ajuste em github.com/settings/personal-access-tokens.`;
     if (e.status === 401) return `Não consegui ${acao}: o token expirou. Conecte de novo.`;
     return `Não consegui ${acao}${e.status ? ` (erro ${e.status})` : ": sem conexão"}.`;
   }
@@ -519,27 +519,32 @@
       toast("O preço mínimo está maior que o máximo.");
       return;
     }
-    const antes = produtos.slice();
+    const antes = produtos;
     if (editando) {
-      Object.assign(editando, dados);
+      produtos = produtos.map((p) => (p === editando ? { ...p, ...dados } : p));
     } else {
       let id = slug(dados.nome);
       while (produtos.some((p) => p.id === id)) id += "-" + Math.random().toString(36).slice(2, 5);
-      produtos.push({ id, ...dados });
+      produtos = [...produtos, { id, ...dados }];
     }
     $("#btn-salvar").disabled = true;
     try {
       await salvarProdutos(`${editando ? "Edita" : "Adiciona"} ${dados.nome}`);
-      $("#dlg").close();
-      renderLista();
-      toast("Salvo. Checando agora…");
-      await disparar({ acao: "rodada" });
-      setTimeout(carregarTudo, 70000);
-    } catch {
+    } catch (e) {
       produtos = antes;
-      toast("Não consegui salvar. Tente de novo.");
+      toast(erroGitHub(e, "salvar", "Contents"));
+      return;
     } finally {
       $("#btn-salvar").disabled = false;
+    }
+    $("#dlg").close();
+    renderLista();
+    try {
+      await disparar({ acao: "rodada" });
+      toast("Salvo. Checando agora…");
+      setTimeout(carregarTudo, 70000);
+    } catch {
+      toast("Salvo. A checagem começa na próxima execução automática.");
     }
   });
 
@@ -552,9 +557,9 @@
       $("#dlg").close();
       renderLista();
       toast("Produto excluído.");
-    } catch {
+    } catch (e) {
       produtos = antes;
-      toast("Não consegui excluir. Tente de novo.");
+      toast(erroGitHub(e, "excluir", "Contents"));
     }
   });
 
