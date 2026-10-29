@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Monitor de Estoque</title>
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F6F7F9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B0D10" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F6F7F9;
+    --surface: #FFFFFF;
+    --text: #0E1116;
+    --muted: #5B6573;
+    --border: #E2E5EA;
+    --accent: #1B2A4A;
+    --on-accent: #FFFFFF;
+    --ok: #1E7047;
+    --ok-bg: #E6F2EB;
+    --warn: #7A5A12;
+    --danger: #B42318;
+    --focus: #1B2A4A;
+    --radius-field: 12px;
+    --btn-h: 44px;
+    --btn-min: 96px;
+    --btn-max: 280px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0B0D10;
+      --surface: #14171C;
+      --text: #ECEFF3;
+      --muted: #8E98A6;
+      --border: #262B33;
+      --accent: #A9BCD6;
+      --on-accent: #0B0D10;
+      --ok: #7FD1A3;
+      --ok-bg: #12261B;
+      --warn: #E0C27A;
+      --danger: #F19A92;
+      --focus: #A9BCD6;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.5 "Geist", "Inter", system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 640px; margin: 0 auto; padding: 56px 16px 96px; }
+  h1 { font-size: 32px; line-height: 1.15; letter-spacing: -0.02em; font-weight: 700; margin: 0; }
+  h2 { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin: 48px 0 12px; }
+  p { margin: 0; }
+  a { color: inherit; }
+  .muted { color: var(--muted); }
+  .small { font-size: 14px; }
+  [hidden] { display: none !important; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  /* Botão padrão: um só tamanho no app inteiro */
+  .btn {
+    height: var(--btn-h); min-width: var(--btn-min); max-width: var(--btn-max);
+    padding: 0 20px; border-radius: 999px; border: 1px solid transparent;
+    font-family: inherit; font-size: 15px; font-weight: 500; line-height: 1; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    transition: opacity .15s, background-color .15s;
+  }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .btn-primary { background: var(--accent); color: var(--on-accent); }
+  .btn-secondary { background: var(--surface); color: var(--text); border-color: var(--border); }
+  .btn-ghost { background: transparent; color: var(--text); }
+  .btn-danger { background: transparent; color: var(--danger); }
+  .btn:not(:disabled):hover { opacity: .88; }
+  .icon-btn {
+    width: 44px; height: 44px; border-radius: 999px; border: 0; background: transparent;
+    color: var(--muted); cursor: pointer; display: grid; place-items: center;
+  }
+
+  /* Campo com label flutuante */
+  .field { position: relative; }
+  .field input {
+    width: 100%; height: 56px; padding: 22px 14px 6px;
+    border: 1px solid var(--border); border-radius: var(--radius-field);
+    background: var(--surface); color: var(--text); font: inherit; font-size: 16px;
+  }
+  .field input:focus { outline: none; border-color: var(--focus); box-shadow: 0 0 0 1px var(--focus); }
+  .field label {
+    position: absolute; left: 15px; top: 17px; color: var(--muted);
+    pointer-events: none; transition: all .15s; font-size: 16px;
+  }
+  .field input:focus + label,
+  .field input:not(:placeholder-shown) + label { top: 7px; font-size: 12px; }
+  .hint { font-size: 13px; color: var(--muted); margin: 6px 4px 0; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .stack { display: grid; gap: 14px; }
+
+  /* Interruptor */
+  .switch { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 44px; cursor: pointer; }
+  .switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .switch .track {
+    flex: none; width: 48px; height: 28px; border-radius: 999px; background: var(--border);
+    position: relative; transition: background-color .15s;
+  }
+  .switch .track::after {
+    content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px;
+    border-radius: 50%; background: #fff; transition: transform .15s;
+    box-shadow: 0 1px 2px rgba(0,0,0,.2);
+  }
+  .switch input:checked + .track { background: var(--accent); }
+  .switch input:checked + .track::after { transform: translateX(20px); }
+  .switch input:focus-visible + .track { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  /* Cabeçalho */
+  .top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  .status-line { margin-top: 8px; color: var(--muted); font-size: 15px; display: flex; align-items: center; gap: 8px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: none; }
+  .dot.off { background: var(--muted); }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 32px; }
+
+  /* Lista */
+  .list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); }
+  .item { border-bottom: 1px solid var(--border); }
+  .item button {
+    width: 100%; min-height: 72px; padding: 14px 4px; border: 0; background: none; color: inherit;
+    font: inherit; text-align: left; cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  }
+  .item-nome { display: block; font-weight: 500; }
+  .item-meta { display: block; font-size: 14px; color: var(--muted); margin-top: 2px; }
+  .item-aviso { display: block; font-size: 13px; color: var(--warn); margin-top: 2px; }
+  .badge {
+    flex: none; font-size: 13px; font-weight: 500; padding: 4px 10px; border-radius: 999px;
+    border: 1px solid var(--border); color: var(--muted); white-space: nowrap;
+  }
+  .badge.ok { background: var(--ok-bg); border-color: transparent; color: var(--ok); }
+  .empty { padding: 32px 4px; color: var(--muted); }
+  .add { margin-top: 20px; }
+
+  .runs { list-style: none; margin: 0; padding: 0; font-size: 14px; }
+  .runs li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 4px; border-bottom: 1px solid var(--border); color: var(--muted); }
+  .runs li span:first-child { color: var(--text); }
+  .footer-links { display: flex; flex-wrap: wrap; gap: 4px 8px; margin-top: 16px; margin-left: -20px; }
+
+  /* Conectar */
+  .connect { max-width: 420px; margin: 12vh auto 0; }
+  .connect h1 { margin-bottom: 8px; }
+  .connect ol { padding-left: 20px; margin: 12px 0 0; color: var(--muted); font-size: 14px; }
+  .connect ol li { margin: 4px 0; }
+
+  /* Diálogo */
+  dialog {
+    width: min(560px, 100%); max-height: 92dvh; padding: 0; border: 0;
+    border-radius: 20px; background: var(--bg); color: var(--text);
+  }
+  dialog::backdrop { background: rgba(8,10,14,.45); }
+  @media (max-width: 600px) {
+    dialog { margin: auto 0 0; max-width: 100%; border-radius: 20px 20px 0 0; }
+  }
+  .dlg-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 8px 0 20px; }
+  .dlg-head h3 { margin: 0; font-size: 20px; font-weight: 600; }
+  .dlg-body { padding: 16px 20px 8px; }
+  .dlg-foot { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; padding: 16px 20px 24px; }
+  .dlg-foot .spacer { flex: 1; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px);
+    max-width: calc(100% - 32px); padding: 12px 18px; border-radius: 999px;
+    background: var(--text); color: var(--bg); font-size: 14px;
+    opacity: 0; transition: all .2s; pointer-events: none; z-index: 10;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- Tela de conexão -->
+<main id="tela-conectar" hidden>
+  <div class="connect">
+    <h1>Monitor de Estoque</h1>
+    <p class="muted">Para editar a lista, conecte um token do GitHub. Ele fica salvo só neste navegador.</p>
+    <form id="form-token" class="stack" style="margin-top:32px">
+      <div class="field">
+        <input id="token" type="password" placeholder=" " autocomplete="off" required>
+        <label for="token">Token do GitHub</label>
+      </div>
+      <button class="btn btn-primary" type="submit">Conectar</button>
+    </form>
+    <h2>Como criar o token</h2>
+    <ol>
+      <li>Abra <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a>.</li>
+      <li>Em <b>Repository access</b>, escolha <b>Only select repositories</b> e marque <b id="nome-repo">amazon-monitor</b>.</li>
+      <li>Em <b>Permissions</b>, dê <b>Read and write</b> para <b>Contents</b> e para <b>Actions</b>.</li>
+      <li>Gere o token e cole aqui.</li>
+    </ol>
+  </div>
+</main>
+
+<!-- Tela principal -->
+<main id="tela-app" hidden>
+  <header class="top">
+    <div>
+      <h1>Monitor</h1>
+      <p class="status-line" aria-live="polite"><span class="dot" id="dot"></span><span id="status-texto">Carregando…</span></p>
+    </div>
+    <button class="btn btn-secondary" id="btn-pausar" type="button">Pausar</button>
+  </header>
+
+  <div class="actions">
+    <button class="btn btn-secondary" id="btn-checar" type="button">Checar agora</button>
+    <button class="btn btn-secondary" id="btn-teste" type="button">Enviar teste</button>
+  </div>
+
+  <h2>Produtos</h2>
+  <ul class="list" id="lista"></ul>
+  <button class="btn btn-primary add" id="btn-adicionar" type="button">Adicionar produto</button>
+
+  <h2>Últimas execuções</h2>
+  <ul class="runs" id="runs"></ul>
+  <div class="footer-links">
+    <a class="btn btn-ghost" id="link-actions" target="_blank" rel="noopener">Ver no GitHub</a>
+    <button class="btn btn-ghost" id="btn-sair" type="button">Desconectar</button>
+  </div>
+</main>
+
+<!-- Editar produto -->
+<dialog id="dlg" aria-labelledby="dlg-titulo">
+  <form id="form-produto" method="dialog">
+    <div class="dlg-head">
+      <h3 id="dlg-titulo">Novo produto</h3>
+      <button class="icon-btn" type="button" id="btn-fechar" aria-label="Fechar">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 5l10 10M15 5L5 15"/></svg>
+      </button>
+    </div>
+    <div class="dlg-body stack">
+      <div class="field">
+        <input id="f-nome" placeholder=" " required maxlength="120">
+        <label for="f-nome">Nome</label>
+      </div>
+      <div>
+        <div class="field">
+          <input id="f-url" type="url" placeholder=" " required inputmode="url">
+          <label for="f-url">Link do produto</label>
+        </div>
+        <p class="hint">Amazon, Kabum, Magalu, Mercado Livre, loja oficial…</p>
+      </div>
+      <div>
+        <div class="row">
+          <div class="field">
+            <input id="f-min" placeholder=" " inputmode="decimal">
+            <label for="f-min">Preço mínimo</label>
+          </div>
+          <div class="field">
+            <input id="f-max" placeholder=" " inputmode="decimal">
+            <label for="f-max">Preço máximo</label>
+          </div>
+        </div>
+        <p class="hint">Opcional. Só avisa se o preço estiver nessa faixa. O mínimo evita anúncios de acessório ou golpe.</p>
+      </div>
+      <label class="switch" id="wrap-amazon">
+        <span>Só quando vendido pela Amazon<span class="hint" style="display:block;margin:0">Ignora revendedores com preço inflado</span></span>
+        <input type="checkbox" id="f-amazon" checked><span class="track"></span>
+      </label>
+      <div id="wrap-esgotado">
+        <div class="field">
+          <input id="f-esgotado" placeholder=" " maxlength="80">
+          <label for="f-esgotado">Texto que indica esgotado</label>
+        </div>
+        <p class="hint">Opcional. Use se a loja não informar o estoque sozinha. Ex.: “Esgotado”, “Avise-me quando chegar”.</p>
+      </div>
+      <label class="switch">
+        <span>Monitorar este produto</span>
+        <input type="checkbox" id="f-ativo" checked><span class="track"></span>
+      </label>
+    </div>
+    <div class="dlg-foot">
+      <button class="btn btn-danger" type="button" id="btn-excluir">Excluir</button>
+      <span class="spacer"></span>
+      <button class="btn btn-secondary" type="button" id="btn-teste-produto">Testar alerta</button>
+      <button class="btn btn-primary" type="submit" id="btn-salvar">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const WORKFLOW = "monitor.yml";
+  const REPO = location.hostname.endsWith(".github.io")
+    ? `${location.hostname.split(".")[0]}/${location.pathname.split("/")[1]}`
+    : "nagliostro/amazon-monitor";
+
+  const store = {
+    get(k) { try { return localStorage.getItem(k) || ""; } catch { return ""; } },
+    set(k, v) { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch {} },
+  };
+  let token = store.get("gh_token");
+  let produtos = [];
+  let produtosSha = null;
+  let estado = {};
+  let editando = null;
+
+  // ---------- utilidades ----------
+  function toast(msg) {
+    const t = $("#toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => t.classList.remove("show"), 3500);
+  }
+  const brl = (v) => v == null ? "" : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: v % 1 ? 2 : 0 });
+  function lerPreco(txt) {
+    txt = String(txt || "").replace(/[^\d.,]/g, "");
+    if (!txt) return null;
+    if (txt.includes(",")) txt = txt.replace(/\./g, "").replace(",", ".");
+    else if (/^\d{1,3}(\.\d{3})+$/.test(txt)) txt = txt.replace(/\./g, "");
+    const n = parseFloat(txt);
+    return isNaN(n) ? null : n;
+  }
+  function loja(url) {
+    try {
+      const h = new URL(url).hostname.replace(/^www\./, "");
+      const nome = h.split(".")[0];
+      return { amazon: "Amazon", kabum: "KaBuM!", magazineluiza: "Magalu", mercadolivre: "Mercado Livre", americanas: "Americanas", fastshop: "Fast Shop", casasbahia: "Casas Bahia", nintendo: "Nintendo" }[nome] || h;
+    } catch { return ""; }
+  }
+  function haQuanto(data) {
+    const s = (Date.now() - new Date(data).getTime()) / 1000;
+    if (s < 60) return "agora";
+    if (s < 3600) return `há ${Math.round(s / 60)} min`;
+    if (s < 86400) return `há ${Math.round(s / 3600)} h`;
+    return `há ${Math.round(s / 86400)} d`;
+  }
+  const b64encode = (s) => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
+  const b64decode = (s) => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\n/g, "")), (c) => c.charCodeAt(0)));
+  const slug = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 32) || "produto";
+
+  // ---------- GitHub ----------
+  async function api(caminho, opcoes = {}) {
+    const r = await fetch(`https://api.github.com/repos/${REPO}${caminho}`, {
+      cache: "no-store",
+      ...opcoes,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        ...(opcoes.body ? { "Content-Type": "application/json" } : {}),
+      },
+    });
+    if (!r.ok) {
+      const erro = new Error(`GitHub respondeu ${r.status}`);
+      erro.status = r.status;
+      throw erro;
+    }
+    return r.status === 204 ? null : r.json();
+  }
+  async function lerArquivo(nome) {
+    try {
+      const r = await api(`/contents/${nome}?ref=main`);
+      return { dados: JSON.parse(b64decode(r.content)), sha: r.sha };
+    } catch (e) {
+      if (e.status === 404) return { dados: null, sha: null };
+      throw e;
+    }
+  }
+  async function salvarProdutos(mensagem) {
+    const corpo = () => JSON.stringify({
+      message: mensagem,
+      content: b64encode(JSON.stringify({ produtos }, null, 2) + "\n"),
+      ...(produtosSha ? { sha: produtosSha } : {}),
+      branch: "main",
+    });
+    try {
+      produtosSha = (await api("/contents/produtos.json", { method: "PUT", body: corpo() })).content.sha;
+    } catch (e) {
+      if (e.status !== 409 && e.status !== 422) throw e;
+      produtosSha = (await lerArquivo("produtos.json")).sha;  // o arquivo mudou em outro lugar
+      produtosSha = (await api("/contents/produtos.json", { method: "PUT", body: corpo() })).content.sha;
+    }
+  }
+  const disparar = (inputs) => api(`/actions/workflows/${WORKFLOW}/dispatches`, {
+    method: "POST", body: JSON.stringify({ ref: "main", inputs }),
+  });
+
+  // ---------- telas ----------
+  function renderLista() {
+    const ul = $("#lista");
+    ul.innerHTML = "";
+    if (!produtos.length) {
+      ul.innerHTML = '<li class="empty">Nenhum produto ainda.</li>';
+      return;
+    }
+    for (const p of produtos) {
+      const e = estado[p.id] || {};
+      const faixa = p.preco_min && p.preco_max ? `${brl(p.preco_min)} a ${brl(p.preco_max)}`
+        : p.preco_max ? `até ${brl(p.preco_max)}` : p.preco_min ? `a partir de ${brl(p.preco_min)}` : "";
+      const meta = [loja(p.url), faixa, e.preco ? `último preço ${brl(e.preco)}` : ""].filter(Boolean).join(" · ");
+      let badge = '<span class="badge">Aguardando</span>';
+      if (!p.ativo) badge = '<span class="badge">Pausado</span>';
+      else if (e.status === "disponivel") badge = '<span class="badge ok">Disponível</span>';
+      else if (e.status === "indisponivel") badge = '<span class="badge">Esgotado</span>';
+      const aviso = p.ativo && (e.motivo || e.aviso) ? `<span class="item-aviso"></span>` : "";
+
+      const li = document.createElement("li");
+      li.className = "item";
+      li.innerHTML = `<button type="button"><span><span class="item-nome"></span><span class="item-meta"></span>${aviso}</span>${badge}</button>`;
+      li.querySelector(".item-nome").textContent = p.nome;
+      li.querySelector(".item-meta").textContent = meta;
+      if (aviso) li.querySelector(".item-aviso").textContent = e.motivo || e.aviso;
+      li.querySelector("button").setAttribute("aria-label", `Editar ${p.nome}`);
+      li.querySelector("button").addEventListener("click", () => abrirDialogo(p));
+      ul.appendChild(li);
+    }
+  }
+
+  async function carregarStatus() {
+    const [wf, runs] = await Promise.all([
+      api(`/actions/workflows/${WORKFLOW}`),
+      api(`/actions/workflows/${WORKFLOW}/runs?per_page=6`),
+    ]);
+    const ativo = wf.state === "active";
+    const ultimo = runs.workflow_runs.find((r) => r.status === "completed");
+    const n = produtos.filter((p) => p.ativo).length;
+    $("#dot").classList.toggle("off", !ativo);
+    $("#status-texto").textContent = ativo
+      ? `Monitorando ${n} produto${n === 1 ? "" : "s"}${ultimo ? ` · checado ${haQuanto(ultimo.updated_at)}` : ""}`
+      : "Pausado";
+    $("#btn-pausar").textContent = ativo ? "Pausar" : "Retomar";
+    $("#btn-pausar").dataset.ativo = ativo ? "1" : "";
+
+    const nomes = { schedule: "Automática", workflow_dispatch: "Manual" };
+    const resultado = { success: "ok", failure: "falhou", cancelled: "cancelada" };
+    $("#runs").innerHTML = runs.workflow_runs.map((r) =>
+      `<li><span>${nomes[r.event] || r.event}</span><span>${r.status === "completed" ? resultado[r.conclusion] || r.conclusion : "rodando"} · ${haQuanto(r.created_at)}</span></li>`
+    ).join("") || '<li><span class="muted">Nenhuma ainda</span></li>';
+  }
+
+  async function carregarTudo() {
+    const [p, e] = await Promise.all([lerArquivo("produtos.json"), lerArquivo("estado.json")]);
+    produtos = (p.dados && p.dados.produtos) || [];
+    produtosSha = p.sha;
+    estado = e.dados && !("disponivel" in e.dados) ? e.dados : {};
+    renderLista();
+    await carregarStatus();
+  }
+
+  async function iniciar() {
+    if (!token) {
+      $("#tela-conectar").hidden = false;
+      $("#tela-app").hidden = true;
+      return;
+    }
+    $("#tela-conectar").hidden = true;
+    $("#tela-app").hidden = false;
+    $("#link-actions").href = `https://github.com/${REPO}/actions`;
+    try {
+      await carregarTudo();
+    } catch (e) {
+      if (e.status === 401 || e.status === 403) {
+        toast("Token inválido ou sem permissão. Conecte de novo.");
+        token = "";
+        store.set("gh_token", "");
+        return iniciar();
+      }
+      toast("Não consegui falar com o GitHub. Tente de novo.");
+    }
+  }
+
+  // ---------- diálogo ----------
+  function atualizarCamposLoja() {
+    const amazon = /amazon\./i.test($("#f-url").value);
+    $("#wrap-amazon").hidden = !amazon;
+    $("#wrap-esgotado").hidden = amazon;
+  }
+  function abrirDialogo(p) {
+    editando = p || null;
+    $("#dlg-titulo").textContent = p ? "Editar produto" : "Novo produto";
+    $("#f-nome").value = p ? p.nome : "";
+    $("#f-url").value = p ? p.url : "";
+    $("#f-min").value = p && p.preco_min ? String(p.preco_min).replace(".", ",") : "";
+    $("#f-max").value = p && p.preco_max ? String(p.preco_max).replace(".", ",") : "";
+    $("#f-amazon").checked = p ? p.so_amazon !== false : true;
+    $("#f-esgotado").value = p ? p.texto_esgotado || "" : "";
+    $("#f-ativo").checked = p ? p.ativo !== false : true;
+    $("#btn-excluir").hidden = !p;
+    $("#btn-teste-produto").hidden = !p;
+    atualizarCamposLoja();
+    $("#dlg").showModal();
+  }
+  $("#f-url").addEventListener("input", atualizarCamposLoja);
+  $("#btn-fechar").addEventListener("click", () => $("#dlg").close());
+  $("#dlg").addEventListener("click", (e) => { if (e.target === $("#dlg")) $("#dlg").close(); });
+
+  $("#form-produto").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const dados = {
+      nome: $("#f-nome").value.trim(),
+      url: $("#f-url").value.trim(),
+      preco_min: lerPreco($("#f-min").value),
+      preco_max: lerPreco($("#f-max").value),
+      so_amazon: $("#f-amazon").checked,
+      texto_esgotado: $("#f-esgotado").value.trim(),
+      ativo: $("#f-ativo").checked,
+    };
+    if (dados.preco_min && dados.preco_max && dados.preco_min > dados.preco_max) {
+      toast("O preço mínimo está maior que o máximo.");
+      return;
+    }
+    const antes = produtos.slice();
+    if (editando) {
+      Object.assign(editando, dados);
+    } else {
+      let id = slug(dados.nome);
+      while (produtos.some((p) => p.id === id)) id += "-" + Math.random().toString(36).slice(2, 5);
+      produtos.push({ id, ...dados });
+    }
+    $("#btn-salvar").disabled = true;
+    try {
+      await salvarProdutos(`${editando ? "Edita" : "Adiciona"} ${dados.nome}`);
+      $("#dlg").close();
+      renderLista();
+      toast("Salvo. Checando agora…");
+      await disparar({ acao: "rodada" });
+      setTimeout(carregarTudo, 70000);
+    } catch {
+      produtos = antes;
+      toast("Não consegui salvar. Tente de novo.");
+    } finally {
+      $("#btn-salvar").disabled = false;
+    }
+  });
+
+  $("#btn-excluir").addEventListener("click", async () => {
+    if (!editando || !confirm(`Excluir “${editando.nome}”?`)) return;
+    const antes = produtos.slice();
+    produtos = produtos.filter((p) => p !== editando);
+    try {
+      await salvarProdutos(`Remove ${editando.nome}`);
+      $("#dlg").close();
+      renderLista();
+      toast("Produto excluído.");
+    } catch {
+      produtos = antes;
+      toast("Não consegui excluir. Tente de novo.");
+    }
+  });
+
+  $("#btn-teste-produto").addEventListener("click", async () => {
+    try {
+      await disparar({ acao: "teste", produto_id: editando.id });
+      toast("Alerta de teste a caminho. Chega no Telegram em ~30 s.");
+    } catch { toast("Não consegui disparar o teste."); }
+  });
+
+  // ---------- ações da tela principal ----------
+  $("#form-token").addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    token = $("#token").value.trim();
+    store.set("gh_token", token);
+    iniciar();
+  });
+  $("#btn-sair").addEventListener("click", () => {
+    token = "";
+    store.set("gh_token", "");
+    iniciar();
+  });
+  $("#btn-adicionar").addEventListener("click", () => abrirDialogo(null));
+  $("#btn-teste").addEventListener("click", async () => {
+    try {
+      await disparar({ acao: "teste", produto_id: "" });
+      toast("Mensagem de teste a caminho. Chega no Telegram em ~30 s.");
+    } catch { toast("Não consegui disparar o teste."); }
+  });
+  $("#btn-checar").addEventListener("click", async () => {
+    try {
+      await disparar({ acao: "rodada" });
+      toast("Checagem iniciada. O resultado aparece em ~1 min.");
+      setTimeout(carregarTudo, 70000);
+    } catch { toast("Não consegui iniciar a checagem."); }
+  });
+  $("#btn-pausar").addEventListener("click", async (ev) => {
+    const ativo = !!ev.currentTarget.dataset.ativo;
+    try {
+      await api(`/actions/workflows/${WORKFLOW}/${ativo ? "disable" : "enable"}`, { method: "PUT" });
+      toast(ativo ? "Monitor pausado." : "Monitor retomado.");
+      await carregarStatus();
+    } catch { toast("Não consegui mudar o estado do monitor."); }
+  });
+
+  $("#nome-repo").textContent = REPO.split("/")[1];
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && token) carregarTudo().catch(() => {}); });
+  setInterval(() => { if (!document.hidden && token) carregarTudo().catch(() => {}); }, 60000);
+  iniciar();
+})();
+</script>
+</body>
+</html>

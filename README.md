@@ -1,44 +1,41 @@
-# Monitor Amazon → Telegram
+# Monitor de Estoque → Telegram
 
-Checa a página do produto mais ou menos a cada minuto pelo GitHub Actions. Quando o produto fica
-disponível (vendido pela Amazon e abaixo do preço máximo), manda uma mensagem no Telegram com um
-link que já põe o item no carrinho. Você só finaliza a compra.
+Checa produtos da Amazon e de outras lojas pelo GitHub Actions (mais ou menos a cada minuto) e
+manda uma mensagem no Telegram quando um deles fica disponível dentro da faixa de preço, com o
+link para comprar.
 
-## Configuração (uma vez)
+## Interface
 
-1. **Bot do Telegram**
-   - No Telegram, fale com **@BotFather** → `/newbot` → copie o **token**.
-   - Mande qualquer mensagem para o seu bot novo e abra
-     `https://api.telegram.org/bot<TOKEN>/getUpdates`. O número em `"chat":{"id": ...}` é o seu
-     **chat id**.
+**https://nagliostro.github.io/amazon-monitor/**
 
-2. **Repositório no GitHub** (público, para os minutos do Actions serem ilimitados)
-   - Envie esta pasta para um repositório novo.
-   - Em *Settings → Secrets and variables → Actions*:
-     - **Secrets:** `TELEGRAM_TOKEN`, `TELEGRAM_CHAT_ID`
-     - **Variables (opcionais):** `PRECO_MAXIMO` (ex.: `3500`), `SO_AMAZON` (`1` ou `0`), `ASIN`
+Nela você adiciona, edita e pausa produtos, define a faixa de preço, manda alertas de teste,
+força uma checagem e pausa o monitor inteiro. Para conectar, crie um token em
+<https://github.com/settings/personal-access-tokens/new>:
 
-3. **Teste:** aba *Actions → Monitor Amazon → Run workflow*. O log mostra o resultado de cada checagem.
+- *Repository access*: **Only select repositories** → `amazon-monitor`
+- *Permissions*: **Contents** e **Actions** → *Read and write*
 
-Teste do Telegram no seu PC:
+O token fica salvo só no navegador onde você o colou.
 
-```
-set TELEGRAM_TOKEN=...
-set TELEGRAM_CHAT_ID=...
-python monitor.py --teste-telegram
-```
+## Lojas
 
-## Como funciona
+- **Amazon**: lê o botão de compra, o preço e o vendedor. Pode exigir que o vendedor seja a Amazon.
+- **Outras lojas** (Kabum, Magalu, Mercado Livre etc.): lê o estoque e o preço que a página
+  declara em `schema.org`. Se a loja não declarar, preencha o **texto que indica esgotado**
+  (ex.: "Esgotado"). Quando esse texto some da página, o produto conta como disponível.
 
-- O agendamento dispara a cada 5 min. Cada execução fica 4 min checando a cada ~60 s.
-- O `estado.json` guarda se o alerta já foi enviado, para não mandar mensagem repetida. Quando o
-  produto esgota de novo, o alerta é rearmado.
-- Se a Amazon devolver captcha, a checagem aparece como `bloqueado` no log e tenta de novo na próxima.
+## Arquivos
+
+- `produtos.json`: a lista (editada pela interface)
+- `estado.json`: último status de cada produto, para não repetir alertas
+- `monitor.py`: a checagem
+- `.github/workflows/monitor.yml`: agendamento (a cada 5 min, 4 min de checagem por execução)
+- `docs/`: a interface (GitHub Pages) e o `design.md`
 
 ## Limitações
 
 - O GitHub pode atrasar o agendamento em horários de pico e **desativa o cron depois de 60 dias**
-  sem commits no repositório. Os commits do `estado.json` só acontecem quando o estado muda.
-- Os IPs do GitHub são de datacenter, e a Amazon às vezes responde com captcha.
-- Os termos do GitHub Actions preferem uso ligado a software. Monitoramento leve costuma passar,
-  mas o GitHub pode desativar o workflow.
+  sem commits. Editar a lista pela interface conta como commit.
+- Os IPs do GitHub são de datacenter, e algumas lojas respondem com captcha ou bloqueio. Isso
+  aparece como aviso no produto.
+- Os termos do GitHub Actions preferem uso ligado a software, então o GitHub pode desativar o workflow.

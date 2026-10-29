@@ -1,0 +1,14 @@
+{
+  "produtos": [
+    {
+      "id": "zelda-40th",
+      "nome": "Nintendo Switch 2 – Zelda 40th Anniversary Edition",
+      "url": "https://www.amazon.com.br/dp/B0HK2KVYD7",
+      "preco_min": null,
+      "preco_max": null,
+      "so_amazon": true,
+      "texto_esgotado": "",
+      "ativo": true
+    }
+  ]
+}
