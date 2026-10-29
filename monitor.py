@@ -174,7 +174,9 @@ def checar(sessao: requests.Session, produto: dict) -> dict:
         return {"status": "erro", "motivo": str(e)[:120]}
 
     html = resp.text
-    if resp.status_code in (403, 429, 503) or "validateCaptcha" in html:
+    if "validateCaptcha" in html:
+        return {"status": "bloqueado", "motivo": "a loja pediu captcha; tenta de novo na próxima"}
+    if resp.status_code in (403, 429, 503):
         return {"status": "bloqueado", "motivo": f"a loja bloqueou a leitura (HTTP {resp.status_code})"}
     if resp.status_code != 200:
         return {"status": "erro", "motivo": f"HTTP {resp.status_code}"}
