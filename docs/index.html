@@ -313,7 +313,7 @@
     t.textContent = msg;
     t.classList.add("show");
     clearTimeout(toast.timer);
-    toast.timer = setTimeout(() => t.classList.remove("show"), 3500);
+    toast.timer = setTimeout(() => t.classList.remove("show"), msg.length > 60 ? 7000 : 3500);
   }
   const brl = (v) => v == null ? "" : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: v % 1 ? 2 : 0 });
   function lerPreco(txt) {
@@ -388,6 +388,12 @@
   const disparar = (inputs) => api(`/actions/workflows/${WORKFLOW}/dispatches`, {
     method: "POST", body: JSON.stringify({ ref: "main", inputs }),
   });
+  function erroGitHub(e, acao) {
+    if (e.status === 403 || e.status === 404)
+      return `Não consegui ${acao}: o token precisa de Actions → Read and write. Crie outro e conecte de novo.`;
+    if (e.status === 401) return `Não consegui ${acao}: o token expirou. Conecte de novo.`;
+    return `Não consegui ${acao}${e.status ? ` (erro ${e.status})` : ": sem conexão"}.`;
+  }
 
   // ---------- telas ----------
   function renderLista() {
@@ -556,7 +562,7 @@
     try {
       await disparar({ acao: "teste", produto_id: editando.id });
       toast("Alerta de teste a caminho. Chega no Telegram em ~30 s.");
-    } catch { toast("Não consegui disparar o teste."); }
+    } catch (e) { toast(erroGitHub(e, "enviar o teste")); }
   });
 
   // ---------- ações da tela principal ----------
@@ -576,14 +582,14 @@
     try {
       await disparar({ acao: "teste", produto_id: "" });
       toast("Mensagem de teste a caminho. Chega no Telegram em ~30 s.");
-    } catch { toast("Não consegui disparar o teste."); }
+    } catch (e) { toast(erroGitHub(e, "enviar o teste")); }
   });
   $("#btn-checar").addEventListener("click", async () => {
     try {
       await disparar({ acao: "rodada" });
       toast("Checagem iniciada. O resultado aparece em ~1 min.");
       setTimeout(carregarTudo, 70000);
-    } catch { toast("Não consegui iniciar a checagem."); }
+    } catch (e) { toast(erroGitHub(e, "iniciar a checagem")); }
   });
   $("#btn-pausar").addEventListener("click", async (ev) => {
     const ativo = !!ev.currentTarget.dataset.ativo;
@@ -591,7 +597,7 @@
       await api(`/actions/workflows/${WORKFLOW}/${ativo ? "disable" : "enable"}`, { method: "PUT" });
       toast(ativo ? "Monitor pausado." : "Monitor retomado.");
       await carregarStatus();
-    } catch { toast("Não consegui mudar o estado do monitor."); }
+    } catch (e) { toast(erroGitHub(e, "pausar ou retomar")); }
   });
 
   $("#nome-repo").textContent = REPO.split("/")[1];
